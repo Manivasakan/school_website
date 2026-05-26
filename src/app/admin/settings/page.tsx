@@ -22,7 +22,7 @@ const FIELDS = [
   { key: "social.instagram", label: "Instagram URL" },
 ] as const;
 
-const ALLOWED_KEYS = new Set(FIELDS.map((f) => f.key));
+const ALLOWED_KEYS = new Set<string>(FIELDS.map((f) => f.key));
 
 async function saveSettings(formData: FormData) {
   "use server";
