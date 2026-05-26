@@ -6,8 +6,8 @@ import ws from "ws";
 // Neon requires a WebSocket constructor in Node environments.
 // In Cloudflare Workers / edge runtime the global WebSocket is already available.
 if (typeof globalThis.WebSocket === "undefined") {
-  // @ts-expect-error — ws is a Node polyfill for the global WebSocket
-  neonConfig.webSocketConstructor = ws;
+  // `ws` is a Node polyfill for the global WebSocket the Neon driver needs.
+  neonConfig.webSocketConstructor = ws as unknown as typeof WebSocket;
 }
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
