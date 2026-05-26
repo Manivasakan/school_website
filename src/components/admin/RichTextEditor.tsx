@@ -43,7 +43,8 @@ export default function RichTextEditor({
   useEffect(() => {
     if (!editor) return;
     if (editor.getHTML() !== value) {
-      editor.commands.setContent(value, { emitUpdate: false });
+      // Tiptap 2.x signature: setContent(content, emitUpdate?: boolean)
+      editor.commands.setContent(value, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, editor]);
