@@ -20,11 +20,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# os / editor
+# os / editor / agent tooling
 .DS_Store
 Thumbs.db
 .vscode
 .idea
+.claude/settings.local.json
 
 # cloudflare
 .wrangler

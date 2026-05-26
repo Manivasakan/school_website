@@ -5,6 +5,9 @@ import LogoutButton from "@/components/admin/LogoutButton";
 import { SessionProvider } from "next-auth/react";
 import Link from "next/link";
 
+// Admin pages always need the database and the session — never pre-render.
+export const dynamic = "force-dynamic";
+
 export default async function AdminLayout({
   children,
 }: {

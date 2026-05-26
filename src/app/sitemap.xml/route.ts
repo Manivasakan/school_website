@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
 
+// Render at request time — sitemap reads the DB.
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const base = process.env.AUTH_URL?.replace(/\/$/, "") || "http://localhost:3000";
   const [languages, pages, news] = await Promise.all([
