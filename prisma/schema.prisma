@@ -1,0 +1,289 @@
+// Prisma schema — school website
+// Generator uses driverAdapters preview feature so it works with the Neon serverless driver
+// on Cloudflare Workers / edge runtime.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Auth & RBAC ----------
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  fullName     String
+  avatar       String?    // R2 URL
+  isActive     Boolean    @default(true)
+  totpSecret   String?    // base32-encoded TOTP secret
+  totpEnabled  Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  roles        UserRole[]
+  auditLogs    AuditLog[]
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  description String?
+  isSystem    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  users       UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  module      String
+  action      String
+  description String?
+  roles       RolePermission[]
+
+  @@index([module])
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+// ---------- i18n ----------
+
+model Language {
+  code       String   @id
+  name       String
+  nativeName String
+  isEnabled  Boolean  @default(true)
+  isDefault  Boolean  @default(false)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  pageTranslations  PageTranslation[]
+  newsTranslations  NewsTranslation[]
+  eventTranslations EventTranslation[]
+  staffTranslations StaffTranslation[]
+
+  @@index([isEnabled, sortOrder])
+}
+
+// ---------- Content: Pages (CMS) ----------
+
+model Page {
+  id           String            @id @default(cuid())
+  slug         String            @unique
+  isPublished  Boolean           @default(false)
+  showInNav    Boolean           @default(false)
+  sortOrder    Int               @default(0)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  translations PageTranslation[]
+}
+
+model PageTranslation {
+  pageId          String
+  languageCode    String
+  title           String
+  body            String   @db.Text
+  metaDescription String?
+  page            Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  language        Language @relation(fields: [languageCode], references: [code], onDelete: Cascade)
+
+  @@id([pageId, languageCode])
+}
+
+// ---------- Content: News ----------
+
+model News {
+  id            String            @id @default(cuid())
+  slug          String            @unique
+  featuredImage String?
+  publishedAt   DateTime?
+  isPublished   Boolean           @default(false)
+  category      String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  translations  NewsTranslation[]
+
+  @@index([isPublished, publishedAt])
+}
+
+model NewsTranslation {
+  newsId          String
+  languageCode    String
+  title           String
+  body            String   @db.Text
+  metaDescription String?
+  news            News     @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  language        Language @relation(fields: [languageCode], references: [code], onDelete: Cascade)
+
+  @@id([newsId, languageCode])
+  @@index([languageCode])
+}
+
+// ---------- Content: Events ----------
+
+model Event {
+  id           String             @id @default(cuid())
+  slug         String             @unique
+  startsAt     DateTime
+  endsAt       DateTime?
+  location     String?
+  isPublished  Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  translations EventTranslation[]
+
+  @@index([startsAt])
+}
+
+model EventTranslation {
+  eventId      String
+  languageCode String
+  title        String
+  description  String?  @db.Text
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  language     Language @relation(fields: [languageCode], references: [code], onDelete: Cascade)
+
+  @@id([eventId, languageCode])
+}
+
+// ---------- Content: Staff / Faculty ----------
+
+model Staff {
+  id          String             @id @default(cuid())
+  fullName    String
+  designation String
+  subject     String?
+  email       String?
+  photo       String?
+  sortOrder   Int                @default(0)
+  isActive    Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  translations StaffTranslation[]
+
+  @@index([isActive, sortOrder])
+}
+
+model StaffTranslation {
+  staffId      String
+  languageCode String
+  fullName     String
+  designation  String
+  subject      String?
+  bio          String?  @db.Text
+  staff        Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  language     Language @relation(fields: [languageCode], references: [code], onDelete: Cascade)
+
+  @@id([staffId, languageCode])
+}
+
+// ---------- Downloads (Past Papers, forms, syllabi) ----------
+
+model Download {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  fileUrl     String
+  fileKey     String
+  category    String?  // e.g. "Past Papers - O/L", "Admission Forms"
+  sortOrder   Int      @default(0)
+  sizeBytes   Int?
+  mimeType    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category, sortOrder])
+}
+
+// ---------- Media library (images uploaded to R2) ----------
+
+model MediaItem {
+  id        String   @id @default(cuid())
+  url       String
+  key       String
+  alt       String?
+  caption   String?
+  width     Int?
+  height    Int?
+  sizeBytes Int?
+  mimeType  String?
+  album     String?
+  createdAt DateTime @default(now())
+
+  @@index([album])
+}
+
+// ---------- Videos (YouTube / Vimeo / Facebook embeds) ----------
+
+model VideoItem {
+  id        String   @id @default(cuid())
+  provider  String
+  videoId   String
+  title     String?
+  caption   String?
+  thumbnail String?
+  album     String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([album, sortOrder])
+}
+
+// ---------- Site settings (key-value) ----------
+
+model SiteSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+// ---------- Newsletter subscribers ----------
+
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([isActive, createdAt])
+}
+
+// ---------- Audit log ----------
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  meta      String?  @db.Text
+  ipAddress String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId])
+}
