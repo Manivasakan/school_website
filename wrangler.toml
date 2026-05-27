@@ -1,5 +1,7 @@
 name = "schoolwebsite"
-compatibility_date = "2025-04-01"
+# node:sqlite (used by OpenNext's bundle) needs compat_date >= 2025-04-08.
+# Bump to a recent date to get all latest Workers runtime features.
+compatibility_date = "2025-04-15"
 compatibility_flags = ["nodejs_compat"]
 main = ".open-next/worker.js"
 
